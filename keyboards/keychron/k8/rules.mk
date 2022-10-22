@@ -1,0 +1,1 @@
+BOOTLOADER = sn32-dfu 
