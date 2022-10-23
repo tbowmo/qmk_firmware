@@ -1,5 +1,6 @@
 # MCU name
 MCU = SN32F248BF
+BOOTLOADER = sn32-dfu
 
 # Build Options
 #   comment out to disable the options.
