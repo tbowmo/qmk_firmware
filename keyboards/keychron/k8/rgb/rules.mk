@@ -25,3 +25,5 @@ RGB_MATRIX_DRIVER = SN32F24xB
 # Build ansi by default
 DEFAULT_FOLDER = keychron/k8/rgb/ansi
 
+EEPROM_DRIVER = wear_leveling
+WEAR_LEVELING_DRIVER = sn32_flash
