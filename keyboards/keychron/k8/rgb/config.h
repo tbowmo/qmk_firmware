@@ -29,7 +29,6 @@
 
 /* LED Status indicators */
 #define LED_CAPS_LOCK_PIN B12
-#define LED_PIN_ON_STATE  1
 
 // RGB LED Config
 #define LED_MATRIX_ROWS MATRIX_ROWS
