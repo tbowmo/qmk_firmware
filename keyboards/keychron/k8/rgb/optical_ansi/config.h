@@ -16,5 +16,4 @@
  */
 
 // RGB Matrix Config
-#define DRIVER_LED_TOTAL 87
-#define RGB_MATRIX_LED_COUNT DRIVER_LED_TOTAL
+#define RGB_MATRIX_LED_COUNT 87
