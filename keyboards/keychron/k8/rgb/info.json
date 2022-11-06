@@ -29,5 +29,8 @@
         "pid": "0xFE0E",
         "device_version": "1.0.0",
         "wait_for": false
+    },
+    "indicators": {
+        "caps_lock": "B12"
     }
 }

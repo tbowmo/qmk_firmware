@@ -20,15 +20,8 @@
 
 #include "config_common.h"
 
-/* key matrix size */
-#define MATRIX_ROWS 6
-#define MATRIX_COLS 17
-
 // Connects each switch in the dip switch to the GPIO pin of the MCU
 #define DIP_SWITCH_PINS { D4, D5 }
-
-/* LED Status indicators */
-#define LED_CAPS_LOCK_PIN B12
 
 // RGB LED Config
 #define LED_MATRIX_ROWS MATRIX_ROWS
