@@ -76,6 +76,12 @@ static void init(void) {
     IS31FL3737_init(DRIVER_ADDR_1);
 #        if defined(DRIVER_ADDR_2)
     IS31FL3737_init(DRIVER_ADDR_2);
+#            if defined(DRIVER_ADDR_3)
+    IS31FL3737_init(DRIVER_ADDR_3);
+#                if defined(DRIVER_ADDR_4)
+    IS31FL3737_init(DRIVER_ADDR_4);
+#                endif
+#            endif
 #        endif
 
 #    elif defined(IS31FL3741)
@@ -154,6 +160,12 @@ static void init(void) {
     IS31FL3737_update_led_control_registers(DRIVER_ADDR_1, 0);
 #        if defined(DRIVER_ADDR_2)
     IS31FL3737_update_led_control_registers(DRIVER_ADDR_2, 1);
+#            if defined(DRIVER_ADDR_3)
+    IS31FL3737_update_led_control_registers(DRIVER_ADDR_3, 2);
+#                if defined(DRIVER_ADDR_4)
+    IS31FL3737_update_led_control_registers(DRIVER_ADDR_4, 3);
+#                endif
+#            endif
 #        endif
 
 #    elif defined(IS31FL3741)
@@ -235,6 +247,12 @@ static void flush(void) {
     IS31FL3737_update_pwm_buffers(DRIVER_ADDR_1, 0);
 #        if defined(DRIVER_ADDR_2)
     IS31FL3737_update_pwm_buffers(DRIVER_ADDR_2, 1);
+#            if defined(DRIVER_ADDR_3)
+    IS31FL3737_update_pwm_buffers(DRIVER_ADDR_3, 2);
+#                if defined(DRIVER_ADDR_4)
+    IS31FL3737_update_pwm_buffers(DRIVER_ADDR_4, 3);
+#                endif
+#            endif
 #        endif
 }
 
@@ -382,11 +400,10 @@ const rgb_matrix_driver_t rgb_matrix_driver = {
 };
 
 #elif defined(SN32F24xB)
-static void flush(void) {}  // Due to the way we do PWM, every cycle is a flush
 
 const rgb_matrix_driver_t rgb_matrix_driver = {
     .init          = SN32F24xB_init,
-    .flush         = flush,
+    .flush         = SN32F24xB_flush,
     .set_color     = SN32F24xB_set_color,
     .set_color_all = SN32F24xB_set_color_all,
 };

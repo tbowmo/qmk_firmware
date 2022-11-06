@@ -64,6 +64,7 @@ ifeq ($(strip $(AUDIO_ENABLE)), yes)
         OPT_DEFS += -DAUDIO_DRIVER_PWM
     endif
     OPT_DEFS += -DAUDIO_ENABLE
+    COMMON_VPATH += $(QUANTUM_PATH)/audio
     MUSIC_ENABLE = yes
     SRC += $(QUANTUM_DIR)/process_keycode/process_audio.c
     SRC += $(QUANTUM_DIR)/process_keycode/process_clicky.c
@@ -547,11 +548,7 @@ endif
 VALID_BACKLIGHT_TYPES := pwm timer software custom
 
 BACKLIGHT_ENABLE ?= no
-ifeq ($(strip $(CONVERT_TO_PROTON_C)), yes)
-    BACKLIGHT_DRIVER ?= software
-else
-    BACKLIGHT_DRIVER ?= pwm
-endif
+BACKLIGHT_DRIVER ?= pwm
 ifeq ($(strip $(BACKLIGHT_ENABLE)), yes)
     ifeq ($(filter $(BACKLIGHT_DRIVER),$(VALID_BACKLIGHT_TYPES)),)
         $(call CATASTROPHIC_ERROR,Invalid BACKLIGHT_DRIVER,BACKLIGHT_DRIVER="$(BACKLIGHT_DRIVER)" is not a valid backlight type)
@@ -638,7 +635,7 @@ endif
 COMMON_VPATH += $(QUANTUM_DIR)/bootmagic
 QUANTUM_SRC += $(QUANTUM_DIR)/bootmagic/magic.c
 
-VALID_CUSTOM_MATRIX_TYPES:= yes lite shared no
+VALID_CUSTOM_MATRIX_TYPES:= yes lite no
 
 CUSTOM_MATRIX ?= no
 
@@ -654,11 +651,9 @@ ifneq ($(strip $(CUSTOM_MATRIX)), yes)
     ifneq ($(strip $(CUSTOM_MATRIX)), lite)
         # Include the standard or split matrix code if needed
         QUANTUM_SRC += $(QUANTUM_DIR)/matrix.c
-    endif
-    # if 'shared' then skip only the matrix scan implementation
-    ifeq ($(strip $(CUSTOM_MATRIX)), shared)
-        # Exclude only the standard or split matrix code scan
-        OPT_DEFS += -DMATRIX_NO_SCAN
+    else
+        # Filter out definitions not needed for lite matrix code
+        OPT_DEFS += -DMATRIX_LITE
     endif
 endif
 
