@@ -26,5 +26,10 @@
     },
     "indicators": {
         "caps_lock": "B12"
+    },
+    "usb": {
+        "vid": "0x3434",
+        "device_version": "1.0.0",
+        "wait_for": false
     }
 }
