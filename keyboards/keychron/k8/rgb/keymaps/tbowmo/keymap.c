@@ -67,7 +67,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [_FN1] = LAYOUT_tkl_iso(
         QK_BOOT,          KC_BRID, KC_BRIU, KC_TASK,  KC_FLXP,  RGB_VAD,  RGB_VAI,  KC_MPRV,  KC_MPLY,  KC_MNXT,  KC_MUTE,  KC_VOLD,  KC_VOLU,       _______,   _______,  RGB_TOG,
-        _______,  KC_BT1,  KC_BT2,  KC_BT3,  KC_USB,  KC_PAIR,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,       RGB_SAI,   RGB_SAI,  RGB_HUI,
+        _______,  KC_BT1,  KC_BT2,  KC_BT3, KC_PAIR,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,       RGB_SAI,   RGB_SAI,  RGB_HUI,
         _______, _______, _______, _______, _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,                 RGB_SAD,   RGB_SAD,  RGB_HUD,
         _______, _______, _______, _______, _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,
         _______, _______, _______, _______, _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  KC_WREF,                            KC_VOLU,
@@ -84,165 +84,56 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 
-typedef union {
-  uint32_t raw;
-  struct {
-    uint8_t bt_profile;
-  };
-} user_config_t;
-
-user_config_t user_config;
-
-/***********************
- * bluetooth stuff
- ***********************/
-enum bt_states {
-  BT_OFF,
-  BT_CONNECTING,
-  BT_CONNECTED,
-  BT_PAIRING,
-  BT_DISCONNECTED,
-};
-
-static uint8_t bt_current_state = BT_OFF;
-static uint16_t bt_key_timer = 0;
-#ifdef BLUETOOTH_ENABLE
-static bool bt_led_on = false;
-
-void selectProfile(uint8_t profile) {
-  if (bt_current_state != BT_OFF) {
-    bt_key_timer = timer_read();
-    if (user_config.bt_profile != profile) {
-      user_config.bt_profile = profile;
-      eeconfig_update_user(user_config.raw);
-    }
-    iton_bt_switch_profile(profile);
-  }
+void iton_bt_connection_successful() {
+   set_output(OUTPUT_BLUETOOTH);
 }
 
-void iton_bt_battery_voltage_low(void) {};
-void iton_bt_battery_exit_low_battery_mode(void) {};
-void iton_bt_battery_low_power_shutdown(void) {};
-
-void iton_bt_connection_successful(void) {
-  bt_current_state = BT_CONNECTED;
-  set_output(OUTPUT_BLUETOOTH);
+void iton_bt_enters_connection_state() {
+    uint8_t buf[] = {0xA6, 0x51, 0x62};
+    chSysLockFromISR();
+    spiStartSendI(&SPID0, 3, &buf[0]);
+    chSysUnlockFromISR();
 }
 
-void iton_bt_entered_pairing(void) {
-  bt_current_state = BT_PAIRING;
-  set_output(OUTPUT_NONE);
-}
-void iton_bt_disconnected(void) {
-  bt_current_state = BT_DISCONNECTED;
-  set_output(OUTPUT_NONE);
-}
+bool dip_switch_update_user(uint8_t index, bool active) {
+    switch (index) {
+        case 0: // macos/windows togggle
+            break;
 
-void iton_bt_enters_connection_state(void) {
-  bt_current_state = BT_CONNECTING;
-  uint8_t buf[] = {0xA6, 0x51, 0x62};
-  chSysLockFromISR();
-  spiStartSendI(&SPID0, 3, &buf[0]);
-  chSysUnlockFromISR();
-}
-
-/** keyboard handling functions **/
-
-bool rgb_matrix_indicators_user(void) {
-  static uint16_t blink_timer;
-  if (bt_current_state != BT_OFF) {
-    switch (bt_current_state) {
-      case BT_PAIRING:
-        if (timer_elapsed(blink_timer) > 600) {
-          bt_led_on = !bt_led_on;
-          blink_timer = timer_read();
-        }
-        break;
-      case BT_DISCONNECTED:
-        if (timer_elapsed32(blink_timer) > 200) {
-          bt_led_on = !bt_led_on;
-          blink_timer = timer_read();
-        }
-        break;
-      case BT_CONNECTING:
-        bt_led_on = true;
-        break;
-      case BT_CONNECTED:
-        bt_led_on = false;
+        case 1:
+            #ifdef BLUETOOTH_ENABLE
+            if (active) {
+                set_output(OUTPUT_USB);
+            } else {
+                set_output(OUTPUT_NONE);
+            }
+            #endif
+            return false;
         break;
     }
-    if (bt_led_on) {
-      rgb_matrix_set_color(17 + user_config.bt_profile, 0, 0, 255);
-      return false;
-    }
-  }
-  return true;
+    return true;
 }
-
-void matrix_scan_user(void) {
-  if ((bt_current_state != BT_OFF) && (bt_key_timer > 0) && (timer_elapsed(bt_key_timer) > 1000)) {
-    bt_current_state = BT_PAIRING;
-    iton_bt_enter_pairing();
-  }
-}
-#endif
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-  if (bt_current_state != BT_OFF) {
     if (record->event.pressed) {
-      switch (keycode) {
+        switch(keycode) {
 #ifdef BLUETOOTH_ENABLE
-        case KC_BT1:
-          selectProfile(0);
-          return false;
-        case KC_BT2:
-          selectProfile(1);
-          return false;
-        case KC_BT3:
-          selectProfile(2);
-          return false;
-        case KC_USB:
-          set_output(OUTPUT_AUTO);
-          return false;
-        case KC_PAIR:
-          iton_bt_enter_pairing();
-          return false;
+            case KC_BT1:
+                iton_bt_switch_profile(0);
+                break;
+            case KC_BT2:
+                iton_bt_switch_profile(1);
+                break;
+            case KC_BT3:
+                iton_bt_switch_profile(2);
+                break;
+            case KC_PAIR:
+                iton_bt_enter_pairing();
+                break;
 #endif
-      }
-    } else if (keycode >= KC_BT1 && keycode <= KC_BT3) {
-      bt_key_timer = 0;
-      return false;
+            default:
+                break;
+        }
     }
-  }
-  return true;
-}
-
-bool dip_switch_update_user(uint8_t index, bool active){
-  switch(index){
-    case 0:
-      return false;
-    case 1:
-#ifdef BLUETOOTH_ENABLE
-      if(active){ //Cable mode
-        bt_current_state = BT_OFF;
-        set_output(OUTPUT_USB);
-      }
-      else{ //BT mode
-        set_output(OUTPUT_NONE);
-        // selectProfile(user_config.bt_profile);
-        bt_current_state = BT_CONNECTING;
-      }
-#endif
-      return false;
-  }
-  return true;
-}
-
-void keyboard_post_init_user(void) {
-#ifdef BLUETOOTH_ENABLE
-    user_config.raw = eeconfig_read_user();
-    if (user_config.bt_profile > BT_MAX_PROFILES) {
-      user_config.bt_profile = 0;
-    }
-#endif
+    return true;
 }
