@@ -98,7 +98,7 @@ static inline void iton_bt_rx_bluetooth_notif(uint8_t data) {
             #ifdef ITON_BT_ENABLE_ACK
             while (readPin(ITON_BT_IRQ_LINE));
             writePinHigh(ITON_BT_IRQ_LINE);
-            uint8_t connect_ack_buf[] = {0xA6, 0x51, 0x50};
+            uint8_t connect_ack_buf[] = {control, control_bt, connect_ack};
             chSysLockFromISR();
             spiStartSendI(&SPID0, 3, &connect_ack_buf[0]);
             chSysUnlockFromISR();
@@ -115,8 +115,8 @@ static inline void iton_bt_rx_bluetooth_notif(uint8_t data) {
             #ifdef ITON_BT_ENABLE_ACK
             while (readPin(ITON_BT_IRQ_LINE));
             writePinHigh(ITON_BT_IRQ_LINE);
+            uint8_t disconnect_ack_buf[] = {control, control_bt, disconnect_ack};
             chSysLockFromISR();
-            uint8_t disconnect_ack_buf[] = {0xA6, 0x51, 0x51};
             spiStartSendI(&SPID0, 3, &disconnect_ack_buf[0]);
             chSysUnlockFromISR();
             #endif
