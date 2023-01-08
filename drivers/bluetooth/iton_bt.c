@@ -148,15 +148,6 @@ static void iton_bt_rx_cb(void *arg) {
                                 chSysUnlockFromISR();
                                 #endif
 
-                                #ifdef ITON_BT_ENABLE_DISABLING_SLEEP
-                                while (readPin(ITON_BT_IRQ_LINE));
-                                writePinHigh(ITON_BT_IRQ_LINE);
-                                uint8_t disable_sleep_buf[] = {0xA6, 0x51, 0x65};
-                                chSysLockFromISR();
-                                spiStartSendI(&SPID0, 3, &disable_sleep_buf[0]);
-                                chSysUnlockFromISR();
-                                #endif
-
                                 iton_bt_enters_connection_state();
                                 break;
 
