@@ -25,12 +25,18 @@ enum iton_bt_cmd {
 };
 
 enum iton_bt_control_cmd {
+    control_unknown = 0x25,
     control_usb     = 0x58,
     control_bt      = 0x51,
     control_pins    = 0x52,
 };
 
 enum iton_bt_control_param {
+    // control_unknown
+    control_unknown1 = 0x01,
+    control_unknown2 = 0x02,
+    control_unknown3 = 0x03,
+
     // control_usb
     mode_usb        = 0x01,
 
@@ -49,6 +55,8 @@ enum iton_bt_control_param {
 
     disable_sleep   = 0x65,
     enable_sleep    = 0x68,
+
+    control_bt_unknown = 0x60,
 };
 
 enum iton_bt_notification_type {
@@ -61,6 +69,10 @@ enum iton_bt_notification_param {
     batt_voltage_low            = 0x06,
     batt_exit_low_battery_mode  = 0x0A,
     batt_low_power_shutdown     = 0x07,
+
+    batt_above_70               = 0x04,
+    batt_between_30_70          = 0x02,
+    batt_below_30               = 0x01,
 
     query_working_mode          = 0xA0,
     query_bt_name               = 0xA1,

@@ -87,6 +87,12 @@ static inline void iton_bt_rx_battery_notif(uint8_t data) {
             break;
         case query_bt_name:
             break;
+        case batt_above_70:
+            break;
+        case batt_between_30_70:
+            break;
+        case batt_below_30:
+            break;
     }
 }
 
