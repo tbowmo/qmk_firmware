@@ -88,14 +88,7 @@ void iton_bt_connection_successful() {
    set_output(OUTPUT_BLUETOOTH);
 }
 
-void iton_bt_enters_connection_state() {
-    uint8_t buf[] = {0xA6, 0x51, 0x62};
-    chSysLockFromISR();
-    spiStartSendI(&SPID0, 3, &buf[0]);
-    chSysUnlockFromISR();
-}
-
-bool dip_switch_update_user(uint8_t index, bool active) {
+bool dip_switch_update_kb(uint8_t index, bool active) {
     switch (index) {
         case 0: // macos/windows togggle
             break;
@@ -108,13 +101,12 @@ bool dip_switch_update_user(uint8_t index, bool active) {
                 set_output(OUTPUT_NONE);
             }
             #endif
-            return false;
         break;
     }
     return true;
 }
 
-bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
     if (record->event.pressed) {
         switch(keycode) {
 #ifdef BLUETOOTH_ENABLE
