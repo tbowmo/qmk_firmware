@@ -72,6 +72,63 @@ const SPIConfig iton_bt_spicfg = {
  * Callbacks
  */
 #if defined(PAL_USE_CALLBACKS) || defined(PAL_USE_WAIT)
+static inline void iton_bt_rx_battery_notif(uint8_t data) {
+    switch (data) {
+        case batt_voltage_low:
+            iton_bt_battery_voltage_low();
+            break;
+        case batt_exit_low_battery_mode:
+            iton_bt_battery_exit_low_battery_mode();
+            break;
+        case batt_low_power_shutdown:
+            iton_bt_battery_low_power_shutdown();
+            break;
+        case query_working_mode:
+            break;
+        case query_bt_name:
+            break;
+    }
+}
+
+static inline void iton_bt_rx_bluetooth_notif(uint8_t data) {
+    switch (iton_bt_buffer[2]) {
+        case bt_connection_success:
+            iton_bt_is_connected = true;
+
+            #ifdef ITON_BT_ENABLE_ACK
+            while (readPin(ITON_BT_IRQ_LINE));
+            writePinHigh(ITON_BT_IRQ_LINE);
+            uint8_t connect_ack_buf[] = {0xA6, 0x51, 0x50};
+            chSysLockFromISR();
+            spiStartSendI(&SPID0, 3, &connect_ack_buf[0]);
+            chSysUnlockFromISR();
+            #endif
+
+            iton_bt_connection_successful();
+            break;
+        case bt_entered_pairing:
+            iton_bt_entered_pairing();
+            break;
+        case bt_disconected:
+            iton_bt_is_connected = false;
+
+            #ifdef ITON_BT_ENABLE_ACK
+            while (readPin(ITON_BT_IRQ_LINE));
+            writePinHigh(ITON_BT_IRQ_LINE);
+            chSysLockFromISR();
+            uint8_t disconnect_ack_buf[] = {0xA6, 0x51, 0x51};
+            spiStartSendI(&SPID0, 3, &disconnect_ack_buf[0]);
+            chSysUnlockFromISR();
+            #endif
+
+            iton_bt_disconnected();
+            break;
+        case bt_enters_connection:
+            iton_bt_enters_connection_state();
+            break;
+    }
+}
+
 static void iton_bt_rx_cb(void *arg) {
     if (readPin(ITON_BT_INT_LINE)) {
         chSysLockFromISR();
@@ -89,60 +146,10 @@ static void iton_bt_rx_cb(void *arg) {
             case notification:
                 switch (iton_bt_buffer[1]) {
                     case notif_battery:
-                        switch (iton_bt_buffer[2]) {
-                            case batt_voltage_low:
-                                iton_bt_battery_voltage_low();
-                                break;
-                            case batt_exit_low_battery_mode:
-                                iton_bt_battery_exit_low_battery_mode();
-                                break;
-                            case batt_low_power_shutdown:
-                                iton_bt_battery_low_power_shutdown();
-                                break;
-                            case query_working_mode:
-                                break;
-                            case query_bt_name:
-                                break;
-                        }
+                        iton_bt_rx_battery_notif(iton_bt_buffer[2]);
                         break;
                     case notif_bluetooth:
-                        switch (iton_bt_buffer[2]) {
-                            case bt_connection_success:
-                                iton_bt_is_connected = true;
-
-                                #ifdef ITON_BT_ENABLE_ACK
-                                while (readPin(ITON_BT_IRQ_LINE));
-                                writePinHigh(ITON_BT_IRQ_LINE);
-                                uint8_t connect_ack_buf[] = {0xA6, 0x51, 0x50};
-                                chSysLockFromISR();
-                                spiStartSendI(&SPID0, 3, &connect_ack_buf[0]);
-                                chSysUnlockFromISR();
-                                #endif
-
-                                iton_bt_connection_successful();
-                                break;
-                            case bt_entered_pairing:
-                                iton_bt_entered_pairing();
-                                break;
-                            case bt_disconected:
-                                iton_bt_is_connected = false;
-
-                                #ifdef ITON_BT_ENABLE_ACK
-                                while (readPin(ITON_BT_IRQ_LINE));
-                                writePinHigh(ITON_BT_IRQ_LINE);
-                                chSysLockFromISR();
-                                uint8_t disconnect_ack_buf[] = {0xA6, 0x51, 0x51};
-                                spiStartSendI(&SPID0, 3, &disconnect_ack_buf[0]);
-                                chSysUnlockFromISR();
-                                #endif
-
-                                iton_bt_disconnected();
-                                break;
-                            case bt_enters_connection:
-                                iton_bt_enters_connection_state();
-                                break;
-
-                        }
+                        iton_bt_rx_bluetooth_notif(iton_bt_buffer[2]);
                         break;
                     }
                 break;
