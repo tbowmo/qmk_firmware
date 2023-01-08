@@ -12,7 +12,7 @@
 #endif
 
 #ifndef ITON_BT_IRQ_LINE
-#    define ITON_BT_IRQ_LINE A0
+#    define ITON_BT_IRQ_LINE B1
 #endif
 
 #ifndef ITON_BT_INT_LINE
@@ -139,15 +139,6 @@ static void iton_bt_rx_cb(void *arg) {
                                 iton_bt_disconnected();
                                 break;
                             case bt_enters_connection:
-                                #ifdef ITON_BT_SEND_BT_MODE // only for keychron
-                                while (readPin(ITON_BT_IRQ_LINE));
-                                writePinHigh(ITON_BT_IRQ_LINE);
-                                uint8_t enters_connection_buf[] = {0xA6, 0x51, 0x62};
-                                chSysLockFromISR();
-                                spiStartSendI(&SPID0, 3, &enters_connection_buf[0]);
-                                chSysUnlockFromISR();
-                                #endif
-
                                 iton_bt_enters_connection_state();
                                 break;
 
