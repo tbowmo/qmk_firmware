@@ -12,7 +12,7 @@
 #endif
 
 #ifndef ITON_BT_IRQ_LINE
-#    define ITON_BT_IRQ_LINE B1
+#    define ITON_BT_IRQ_LINE A0
 #endif
 
 #ifndef ITON_BT_INT_LINE
@@ -102,7 +102,6 @@ static inline void iton_bt_rx_bluetooth_notif(uint8_t data) {
             iton_bt_is_connected = true;
 
             #ifdef ITON_BT_ENABLE_ACK
-            while (readPin(ITON_BT_IRQ_LINE));
             writePinHigh(ITON_BT_IRQ_LINE);
             uint8_t connect_ack_buf[] = {control, control_bt, connect_ack};
             chSysLockFromISR();
@@ -119,7 +118,6 @@ static inline void iton_bt_rx_bluetooth_notif(uint8_t data) {
             iton_bt_is_connected = false;
 
             #ifdef ITON_BT_ENABLE_ACK
-            while (readPin(ITON_BT_IRQ_LINE));
             writePinHigh(ITON_BT_IRQ_LINE);
             uint8_t disconnect_ack_buf[] = {control, control_bt, disconnect_ack};
             chSysLockFromISR();
