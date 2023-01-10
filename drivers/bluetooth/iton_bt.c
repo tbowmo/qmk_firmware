@@ -206,6 +206,16 @@ void iton_bt_send2(uint8_t cmd, uint8_t b1, uint8_t b2) {
     spiStartSend(&ITON_BT_SPI_PORT, 3, &iton_bt_buffer[0]);
 }
 
+inline void iton_bt_send_ack(uint8_t b1, uint8_t b2) {
+    writePinHigh(ITON_BT_IRQ_LINE);
+    iton_bt_buffer[0] = control;
+    iton_bt_buffer[1] = b1;
+    iton_bt_buffer[2] = b2;
+    chSysLockFromISR();
+    spiStartSendI(&ITON_BT_SPI_PORT, 3, &iton_bt_buffer[0]);
+    chSysUnlockFromISR();
+}
+
 void iton_bt_send_fn(bool pressed) {
     uint8_t data = pressed ? 0xA3 : 0x00;
 

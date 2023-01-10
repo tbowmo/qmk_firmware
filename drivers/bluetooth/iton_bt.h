@@ -100,6 +100,17 @@ bool iton_bt_is_connected;
  * Driver Callbacks
  */
 
+/**
+ * Driver Callbacks
+ */
+void iton_bt_battery_voltage_low(void);
+void iton_bt_battery_exit_low_battery_mode(void);
+void iton_bt_battery_low_power_shutdown(void);
+
+void iton_bt_connection_successful(void);
+void iton_bt_entered_pairing(void);
+void iton_bt_disconnected(void);
+void iton_bt_enters_connection_state(void);
 
 /**
  * Driver Functions
@@ -116,18 +127,6 @@ void iton_bt_send_fn(bool pressed);
 void iton_bt_send_system(uint16_t data);
 void iton_bt_send_consumer(uint16_t data);
 void iton_bt_send_keyboard(report_keyboard_t *report);
-
-/**
- * Driver Callbacks
- */
-void iton_bt_battery_voltage_low(void);
-void iton_bt_battery_exit_low_battery_mode(void);
-void iton_bt_battery_low_power_shutdown(void);
-
-void iton_bt_connection_successful(void);
-void iton_bt_entered_pairing(void);
-void iton_bt_disconnected(void);
-void iton_bt_enters_connection_state(void);
 
 /**
  * Driver Macros
