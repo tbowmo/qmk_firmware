@@ -25,17 +25,17 @@ enum iton_bt_cmd {
 };
 
 enum iton_bt_control_cmd {
-    control_unknown = 0x25,
+    control_power   = 0x25,
     control_usb     = 0x58,
     control_bt      = 0x51,
     control_pins    = 0x52,
 };
 
 enum iton_bt_control_param {
-    // control_unknown
-    control_unknown1 = 0x01,
-    control_unknown2 = 0x02,
-    control_unknown3 = 0x03,
+    // control_power
+    sleep_idle_10m  = 0x01,
+    sleep_idle_20m  = 0x02,
+    sleep_idle_30m  = 0x03,
 
     // control_usb
     mode_usb        = 0x01,
@@ -47,16 +47,17 @@ enum iton_bt_control_param {
     switch_profile   = 0x81, // + 0-5 profiles
     os_mac          = 0x74,
     os_win          = 0x75,
+
     connect_ack     = 0x50,
     disconnect_ack  = 0x51,
-    query_voltage   = 0x66,
+    wake_ack        = 0x60,
+    unknown_ack     = 0x52,
 
+    query_voltage   = 0x66,
     query_battery_level = 0x61,
 
     disable_sleep   = 0x65,
     enable_sleep    = 0x68,
-
-    control_bt_unknown = 0x60,
 };
 
 enum iton_bt_notification_type {
@@ -76,6 +77,11 @@ enum iton_bt_notification_param {
 
     query_working_mode          = 0xA0,
     query_bt_name               = 0xA1,
+
+    // Wake from batt_low_power_shutdown
+    batt_wake_mcu               = 0x0B,
+
+    batt_unknown                = 0x08,
 
     // notif_bluetooth
     bt_connection_success       = 0x76,
@@ -101,6 +107,7 @@ bool iton_bt_is_connected;
 void iton_bt_init(void);
 void iton_bt_send(uint8_t cmd, uint8_t *data, uint8_t len);
 void iton_bt_send2(uint8_t cmd, uint8_t b1, uint8_t b2);
+void iton_bt_send_ack(uint8_t b1, uint8_t b2);
 
 void iton_bt_set_pin(uint8_t pin, bool value);
 void iton_bt_set_bt_name(char *name);

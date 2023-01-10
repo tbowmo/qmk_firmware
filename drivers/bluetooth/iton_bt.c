@@ -93,6 +93,16 @@ static inline void iton_bt_rx_battery_notif(uint8_t data) {
             break;
         case batt_below_30:
             break;
+        case batt_wake_mcu:
+            #ifdef ITON_BT_ENABLE_ACK
+            iton_bt_send_ack(control_bt, wake_ack);
+            #endif
+            break;
+        case batt_unknown:
+            #ifdef ITON_BT_ENABLE_ACK
+            iton_bt_send_ack(control_bt, unknown_ack);
+            #endif
+            break;
     }
 }
 
@@ -102,11 +112,7 @@ static inline void iton_bt_rx_bluetooth_notif(uint8_t data) {
             iton_bt_is_connected = true;
 
             #ifdef ITON_BT_ENABLE_ACK
-            writePinHigh(ITON_BT_IRQ_LINE);
-            uint8_t connect_ack_buf[] = {control, control_bt, connect_ack};
-            chSysLockFromISR();
-            spiStartSendI(&SPID0, 3, &connect_ack_buf[0]);
-            chSysUnlockFromISR();
+            iton_bt_send_ack(control_bt, connect_ack);
             #endif
 
             iton_bt_connection_successful();
@@ -118,11 +124,7 @@ static inline void iton_bt_rx_bluetooth_notif(uint8_t data) {
             iton_bt_is_connected = false;
 
             #ifdef ITON_BT_ENABLE_ACK
-            writePinHigh(ITON_BT_IRQ_LINE);
-            uint8_t disconnect_ack_buf[] = {control, control_bt, disconnect_ack};
-            chSysLockFromISR();
-            spiStartSendI(&SPID0, 3, &disconnect_ack_buf[0]);
-            chSysUnlockFromISR();
+            iton_bt_send_ack(control_bt, disconnect_ack);
             #endif
 
             iton_bt_disconnected();
@@ -155,7 +157,7 @@ static void iton_bt_rx_cb(void *arg) {
                     case notif_bluetooth:
                         iton_bt_rx_bluetooth_notif(iton_bt_buffer[2]);
                         break;
-                    }
+                }
                 break;
         }
     }
@@ -186,7 +188,6 @@ void iton_bt_init(void) {
 
 void iton_bt_send(uint8_t cmd, uint8_t *data, uint8_t len) {
     while (readPin(ITON_BT_IRQ_LINE));
-
 
     writePinHigh(ITON_BT_IRQ_LINE);
     iton_bt_buffer[0] = cmd;
