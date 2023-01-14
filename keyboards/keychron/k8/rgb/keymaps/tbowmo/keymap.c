@@ -84,48 +84,161 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 
-void iton_bt_connection_successful() {
-   set_output(OUTPUT_BLUETOOTH);
+typedef union {
+  uint32_t raw;
+  struct {
+    uint8_t bt_profile;
+  };
+} kb_config_t;
+
+kb_config_t kb_config;
+
+enum bt_states {
+    BT_OFF,
+    BT_CONNECTING,
+    BT_CONNECTED,
+    BT_PAIRING,
+    BT_DISCONNECTED,
+};
+
+static uint8_t bt_current_state = BT_OFF;
+static bool bt_led_on = false;
+
+static deferred_token btPairingToken;
+
+uint32_t startPairing(uint32_t trigger_time, void *cb_arg) {
+    /* Initiate pairing mode */
+    iton_bt_enter_pairing();
+    return 0;
 }
 
-bool dip_switch_update_kb(uint8_t index, bool active) {
+void selectProfile(uint8_t profile) {
+    if (bt_current_state != BT_OFF) {
+        btPairingToken = defer_exec(2000, startPairing, NULL);
+        if (kb_config.bt_profile != profile) {
+            kb_config.bt_profile = profile;
+            eeconfig_update_kb(kb_config.raw);
+        }
+        iton_bt_switch_profile(profile);
+    }
+}
+
+void iton_bt_connection_successful() {
+    bt_current_state = BT_CONNECTED;
+    set_output(OUTPUT_BLUETOOTH);
+}
+
+void iton_bt_entered_pairing() {
+    bt_current_state = BT_PAIRING;
+};
+void iton_bt_disconnected() {
+    bt_current_state = BT_DISCONNECTED;
+    set_output(OUTPUT_AUTO);
+};
+void iton_bt_enters_connection_state() {
+    bt_current_state = BT_CONNECTING;
+};
+
+bool rgb_matrix_indicators_user(void) {
+    static uint16_t blink_timer;
+    if (bt_current_state != BT_OFF) {
+        switch (bt_current_state) {
+        case BT_PAIRING:
+            if (timer_elapsed(blink_timer) > 600) {
+                bt_led_on = !bt_led_on;
+                blink_timer = timer_read();
+            }
+            break;
+        case BT_DISCONNECTED:
+            if (timer_elapsed32(blink_timer) > 200) {
+                bt_led_on = !bt_led_on;
+                blink_timer = timer_read();
+            }
+            break;
+        case BT_CONNECTING:
+            bt_led_on = true;
+            break;
+        case BT_CONNECTED:
+            bt_led_on = false;
+            break;
+        }
+        if (bt_led_on) {
+            rgb_matrix_set_color(17 + kb_config.bt_profile, 0, 0, 255);
+        }
+    }
+  return true;
+}
+
+bool dip_switch_update_user(uint8_t index, bool active) {
     switch (index) {
         case 0: // macos/windows togggle
             break;
 
         case 1:
-            #ifdef BLUETOOTH_ENABLE
             if (active) {
                 set_output(OUTPUT_USB);
             } else {
                 set_output(OUTPUT_NONE);
             }
-            #endif
+            return false;
         break;
     }
     return true;
 }
 
-bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
-    if (record->event.pressed) {
-        switch(keycode) {
-#ifdef BLUETOOTH_ENABLE
-            case KC_BT1:
-                iton_bt_switch_profile(0);
-                break;
-            case KC_BT2:
-                iton_bt_switch_profile(1);
-                break;
-            case KC_BT3:
-                iton_bt_switch_profile(2);
-                break;
-            case KC_PAIR:
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (bt_current_state != BT_OFF) {
+        if (record->event.pressed) {
+            switch (keycode) {
+                case KC_BT1:
+                selectProfile(0);
+                return false;
+                case KC_BT2:
+                selectProfile(1);
+                return false;
+                case KC_BT3:
+                selectProfile(2);
+                return false;
+                case KC_USB:
+                set_output(OUTPUT_AUTO);
+                return false;
+                case KC_PAIR:
                 iton_bt_enter_pairing();
-                break;
-#endif
-            default:
-                break;
+                return false;
+            }
+        } else if (keycode >= KC_BT1 && keycode <= KC_BT3) {
+            cancel_deferred_exec(btPairingToken);
+            return false;
         }
     }
     return true;
+}
+
+void keyboard_post_init_user(void) {
+    kb_config.raw = eeconfig_read_user();
+    if (kb_config.bt_profile > BT_MAX_PROFILES) {
+        kb_config.bt_profile = 0;
+    }
+}
+
+
+bool caps_word_press_user(uint16_t keycode) {
+    switch (keycode) {
+        // Keycodes that continue Caps Word, with shift applied.
+        case KC_A ... KC_Z:
+        case KC_MINS:
+        case KC_SLSH:
+            add_weak_mods(MOD_BIT(KC_LSFT));  // Apply shift to next key.
+            return true;
+
+        // Keycodes that continue Caps Word, without shifting.
+        case KC_1 ... KC_0:
+        case KC_BSPC:
+        case KC_DEL:
+        case KC_UNDS:
+            return true;
+
+        default:
+            return false;  // Deactivate Caps Word.
+    }
 }
