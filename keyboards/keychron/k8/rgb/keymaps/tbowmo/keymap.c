@@ -159,7 +159,7 @@ uint32_t led_blinking(uint32_t trigger_time, void *cb_arg) {
         case BT_CONNECTED:
         case BT_OFF:
             bt_led_on = false;
-            break;
+            return 1000;
     }
 
     return 300;
@@ -183,7 +183,8 @@ bool dip_switch_update_user(uint8_t index, bool active) {
             if (active) {
                 set_output(OUTPUT_USB);
             } else {
-                set_output(OUTPUT_NONE);
+                set_output(OUTPUT_BLUETOOTH);
+                bt_current_state = BT_CONNECTING; // We should be trying to connect, so just signal this
             }
             return false;
         break;
