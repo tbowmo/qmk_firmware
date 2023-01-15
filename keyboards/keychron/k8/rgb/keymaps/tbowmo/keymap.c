@@ -67,7 +67,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [_FN1] = LAYOUT_tkl_iso(
         QK_BOOT,          KC_BRID, KC_BRIU, KC_TASK,  KC_FLXP,  RGB_VAD,  RGB_VAI,  KC_MPRV,  KC_MPLY,  KC_MNXT,  KC_MUTE,  KC_VOLD,  KC_VOLU,       _______,   _______,  RGB_TOG,
-        _______,  KC_BT1,  KC_BT2,  KC_BT3, KC_PAIR,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,       RGB_SAI,   RGB_SAI,  RGB_HUI,
+        _______,  KC_BT1,  KC_BT2,  KC_BT3,  KC_USB,  KC_PAIR,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,       RGB_SAI,   RGB_SAI,  RGB_HUI,
         _______, _______, _______, _______, _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,                 RGB_SAD,   RGB_SAD,  RGB_HUD,
         _______, _______, _______, _______, _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,
         _______, _______, _______, _______, _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  KC_WREF,                            KC_VOLU,
@@ -103,18 +103,20 @@ enum bt_states {
 
 static uint8_t bt_current_state = BT_OFF;
 static bool bt_led_on = false;
+static deferred_token deferred_bt_pairing = INVALID_DEFERRED_TOKEN;
+static uint16_t key_pressed_time;
 
-static deferred_token btPairingToken;
-
-uint32_t startPairing(uint32_t trigger_time, void *cb_arg) {
+uint32_t start_pairing(uint32_t trigger_time, void *cb_arg) {
     /* Initiate pairing mode */
     iton_bt_enter_pairing();
     return 0;
 }
 
-void selectProfile(uint8_t profile) {
+void select_bt_profile(uint8_t profile) {
     if (bt_current_state != BT_OFF) {
-        btPairingToken = defer_exec(2000, startPairing, NULL);
+        // Start pairing in 2 seconds, unless deferred exec is cancelled
+        cancel_deferred_exec(deferred_bt_pairing);
+        deferred_bt_pairing = defer_exec(2000, start_pairing, NULL);
         if (kb_config.bt_profile != profile) {
             kb_config.bt_profile = profile;
             eeconfig_update_kb(kb_config.raw);
@@ -131,42 +133,45 @@ void iton_bt_connection_successful() {
 void iton_bt_entered_pairing() {
     bt_current_state = BT_PAIRING;
 };
+
 void iton_bt_disconnected() {
     bt_current_state = BT_DISCONNECTED;
-    set_output(OUTPUT_AUTO);
 };
+
 void iton_bt_enters_connection_state() {
     bt_current_state = BT_CONNECTING;
 };
 
-bool rgb_matrix_indicators_user(void) {
-    static uint16_t blink_timer;
-    if (bt_current_state != BT_OFF) {
-        switch (bt_current_state) {
+
+uint32_t led_blinking(uint32_t trigger_time, void *cb_arg) {
+    bt_led_on = !bt_led_on;
+
+    switch (bt_current_state) {
         case BT_PAIRING:
-            if (timer_elapsed(blink_timer) > 600) {
-                bt_led_on = !bt_led_on;
-                blink_timer = timer_read();
-            }
-            break;
+            return 600;
         case BT_DISCONNECTED:
-            if (timer_elapsed32(blink_timer) > 200) {
-                bt_led_on = !bt_led_on;
-                blink_timer = timer_read();
-            }
-            break;
         case BT_CONNECTING:
-            bt_led_on = true;
+            if (key_pressed_time == 0 || timer_elapsed32(key_pressed_time) > 3000) {
+                key_pressed_time = 0;
+                bt_led_on = false;
+            }
             break;
         case BT_CONNECTED:
+        case BT_OFF:
             bt_led_on = false;
             break;
-        }
-        if (bt_led_on) {
-            rgb_matrix_set_color(17 + kb_config.bt_profile, 0, 0, 255);
-        }
     }
-  return true;
+
+    return 300;
+}
+
+
+bool rgb_matrix_indicators_user(void) {
+    if (bt_led_on) {
+        rgb_matrix_set_color(17 + kb_config.bt_profile, 0, 0, 255);
+    }
+
+    return true;
 }
 
 bool dip_switch_update_user(uint8_t index, bool active) {
@@ -191,23 +196,25 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         if (record->event.pressed) {
             switch (keycode) {
                 case KC_BT1:
-                selectProfile(0);
+                select_bt_profile(0);
                 return false;
                 case KC_BT2:
-                selectProfile(1);
+                select_bt_profile(1);
                 return false;
                 case KC_BT3:
-                selectProfile(2);
+                select_bt_profile(2);
                 return false;
                 case KC_USB:
-                set_output(OUTPUT_AUTO);
+                set_output(OUTPUT_USB);
                 return false;
                 case KC_PAIR:
                 iton_bt_enter_pairing();
                 return false;
+                default:
+                    key_pressed_time = timer_read();
             }
         } else if (keycode >= KC_BT1 && keycode <= KC_BT3) {
-            cancel_deferred_exec(btPairingToken);
+            cancel_deferred_exec(deferred_bt_pairing);
             return false;
         }
     }
@@ -219,6 +226,7 @@ void keyboard_post_init_user(void) {
     if (kb_config.bt_profile > BT_MAX_PROFILES) {
         kb_config.bt_profile = 0;
     }
+    defer_exec(300, led_blinking, NULL);
 }
 
 
@@ -239,7 +247,6 @@ bool caps_word_press_user(uint16_t keycode) {
         case KC_BSPC:
         case KC_DEL:
             return true;
-
         default:
             return false;  // Deactivate Caps Word.
     }
