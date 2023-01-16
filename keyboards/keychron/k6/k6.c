@@ -36,6 +36,9 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
             case BT_PAIR:
                 iton_bt_enter_pairing();
                 break;
+            case BT_RESET:
+                iton_bt_reset_pairing();
+                break;
 #endif
             default:
                 break;
