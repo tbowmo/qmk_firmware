@@ -1,4 +1,4 @@
-// Copyright 2022 1Conan (@1Conan)
+// Copyright 2023 1Conan (@1Conan)
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <string.h>
@@ -144,6 +144,11 @@ static void iton_bt_rx_cb(void *arg) {
         chSysLockFromISR();
         spiStopTransferI(&ITON_BT_SPI_PORT, NULL);
         chSysUnlockFromISR();
+
+        #ifdef ITON_BT_ENABLE_ACK
+        // hack to make sure irq is low since acks messes with stuff
+        writePinLow(ITON_BT_IRQ_LINE);
+        #endif
 
         switch (iton_bt_buffer[0]) {
             case led_state:

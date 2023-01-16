@@ -1,4 +1,4 @@
-// Copyright 2022 1Conan (@1Conan)
+// Copyright 2023 1Conan (@1Conan)
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "report.h"
@@ -142,8 +142,6 @@ void iton_bt_send_keyboard(report_keyboard_t *report);
 #define iton_bt_switch_profile(x)   iton_bt_control_bt(switch_profile + x)
 #define iton_bt_os_mac()            iton_bt_control_bt(os_mac)
 #define iton_bt_os_win()            iton_bt_control_bt(os_win)
-#define iton_bt_connect_ack()       iton_bt_control_bt(connect_ack)
-#define iton_bt_disconnect_ack()    iton_bt_control_bt(disconnect_ack)
 #define iton_bt_query_voltage()     iton_bt_control_bt(query_voltage)
 
 #define iton_bt_query_battery_level() iton_bt_control_bt(query_battery_level)
