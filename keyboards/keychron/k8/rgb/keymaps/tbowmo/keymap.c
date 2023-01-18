@@ -101,30 +101,70 @@ enum bt_states {
     BT_DISCONNECTED,
 };
 
+#define PAIRING_LONG_PRESS  2000
+#define PAIRING_BLINK_DELAY 600
+#define DISCONNECTED_BLINK_DELAY 300
+
 static uint8_t bt_current_state = BT_OFF;
 static bool bt_led_on = false;
 static deferred_token deferred_bt_pairing = INVALID_DEFERRED_TOKEN;
 static uint16_t key_pressed_time;
 
+/**
+ * Deferred execution for entering pairing mode
+*/
 uint32_t start_pairing(uint32_t trigger_time, void *cb_arg) {
     /* Initiate pairing mode */
     iton_bt_enter_pairing();
     return 0;
 }
 
+/**
+ * Deferred execution for LED blinking
+*/
+uint32_t led_blinking(uint32_t trigger_time, void *cb_arg) {
+    bt_led_on = !bt_led_on;
+
+    switch (bt_current_state) {
+        case BT_PAIRING:
+            return PAIRING_BLINK_DELAY;
+        case BT_DISCONNECTED:
+        case BT_CONNECTING:
+            if (key_pressed_time == 0 || timer_elapsed32(key_pressed_time) > 3000) {
+                key_pressed_time = 0;
+                bt_led_on = false;
+            }
+            return DISCONNECTED_BLINK_DELAY;
+        case BT_CONNECTED:
+        case BT_OFF:
+        default:
+            bt_led_on = false;
+            return 1000;
+    }
+}
+
+/**
+ * Internal bt profile selection, storing the selected profile
+ * in eeprom, so it can be retrieved on bootup for flashing correct
+ * indicators
+*/
 void select_bt_profile(uint8_t profile) {
     if (bt_current_state != BT_OFF) {
-        // Start pairing in 2 seconds, unless deferred exec is cancelled
-        cancel_deferred_exec(deferred_bt_pairing);
-        deferred_bt_pairing = defer_exec(2000, start_pairing, NULL);
+        // Start pairing in 2 seconds (Will be cancelled on key release)
+        if (!extend_deferred_exec(deferred_bt_pairing, PAIRING_LONG_PRESS)) {
+            deferred_bt_pairing = defer_exec(PAIRING_LONG_PRESS, start_pairing, NULL);
+        }
         if (kb_config.bt_profile != profile) {
             kb_config.bt_profile = profile;
-            eeconfig_update_kb(kb_config.raw);
+            eeconfig_update_user(kb_config.raw);
         }
         iton_bt_switch_profile(profile);
     }
 }
 
+/**
+ * ITON callback methods, setting a local state variable
+*/
 void iton_bt_connection_successful() {
     bt_current_state = BT_CONNECTED;
     set_output(OUTPUT_BLUETOOTH);
@@ -143,29 +183,9 @@ void iton_bt_enters_connection_state() {
 };
 
 
-uint32_t led_blinking(uint32_t trigger_time, void *cb_arg) {
-    bt_led_on = !bt_led_on;
-
-    switch (bt_current_state) {
-        case BT_PAIRING:
-            return 600;
-        case BT_DISCONNECTED:
-        case BT_CONNECTING:
-            if (key_pressed_time == 0 || timer_elapsed32(key_pressed_time) > 3000) {
-                key_pressed_time = 0;
-                bt_led_on = false;
-            }
-            break;
-        case BT_CONNECTED:
-        case BT_OFF:
-            bt_led_on = false;
-            return 1000;
-    }
-
-    return 300;
-}
-
-
+/**
+ * Setting led on / off (blinking freq defined in deferred exec blink routine)
+*/
 bool rgb_matrix_indicators_user(void) {
     if (bt_led_on) {
         rgb_matrix_set_color(17 + kb_config.bt_profile, 0, 0, 255);
@@ -176,7 +196,7 @@ bool rgb_matrix_indicators_user(void) {
 
 bool dip_switch_update_user(uint8_t index, bool active) {
     switch (index) {
-        case 0: // macos/windows togggle
+        case 0: // macos/windows toggle
             break;
 
         case 1:
@@ -197,20 +217,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         if (record->event.pressed) {
             switch (keycode) {
                 case KC_BT1:
-                select_bt_profile(0);
-                return false;
+                    select_bt_profile(0);
+                    return false;
                 case KC_BT2:
-                select_bt_profile(1);
-                return false;
+                    select_bt_profile(1);
+                    return false;
                 case KC_BT3:
-                select_bt_profile(2);
-                return false;
+                    select_bt_profile(2);
+                    return false;
                 case KC_USB:
-                set_output(OUTPUT_USB);
-                return false;
+                    set_output(OUTPUT_USB);
+                    return false;
                 case KC_PAIR:
-                iton_bt_enter_pairing();
-                return false;
+                    iton_bt_enter_pairing();
+                    return false;
                 default:
                     key_pressed_time = timer_read();
             }
