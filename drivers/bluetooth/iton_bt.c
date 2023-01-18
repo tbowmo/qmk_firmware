@@ -46,6 +46,7 @@ void iton_bt_data_cb(SPIDriver *spip);
 __attribute__((weak)) void iton_bt_battery_voltage_low(void) {}
 __attribute__((weak)) void iton_bt_battery_exit_low_battery_mode(void) {}
 __attribute__((weak)) void iton_bt_battery_low_power_shutdown(void) {}
+__attribute__((weak)) void iton_bt_battery_level(uint8_t level) {}
 
 __attribute__((weak)) void iton_bt_connection_successful(void) {}
 __attribute__((weak)) void iton_bt_entered_pairing(void) {}
@@ -83,15 +84,10 @@ static inline void iton_bt_rx_battery_notif(uint8_t data) {
         case batt_low_power_shutdown:
             iton_bt_battery_low_power_shutdown();
             break;
-        case query_working_mode:
-            break;
-        case query_bt_name:
-            break;
         case batt_above_70:
-            break;
         case batt_between_30_70:
-            break;
         case batt_below_30:
+            iton_bt_battery_level(data);
             break;
         case batt_wake_mcu:
             #ifdef ITON_BT_ENABLE_ACK
@@ -102,6 +98,10 @@ static inline void iton_bt_rx_battery_notif(uint8_t data) {
             #ifdef ITON_BT_ENABLE_ACK
             iton_bt_send_ack(control_bt, unknown_ack);
             #endif
+            break;
+        case query_working_mode:
+            break;
+        case query_bt_name:
             break;
     }
 }

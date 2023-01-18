@@ -106,6 +106,7 @@ bool iton_bt_is_connected;
 void iton_bt_battery_voltage_low(void);
 void iton_bt_battery_exit_low_battery_mode(void);
 void iton_bt_battery_low_power_shutdown(void);
+void iton_bt_battery_level(uint8_t level);
 
 void iton_bt_connection_successful(void);
 void iton_bt_entered_pairing(void);
