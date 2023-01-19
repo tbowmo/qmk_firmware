@@ -95,15 +95,16 @@ kb_config_t kb_config;
 
 enum bt_states {
     BT_OFF,
+    BT_POWERING_UP,
     BT_CONNECTING,
     BT_CONNECTED,
     BT_PAIRING,
     BT_DISCONNECTED,
 };
 
-#define PAIRING_LONG_PRESS  2000
-#define PAIRING_BLINK_DELAY 600
-#define DISCONNECTED_BLINK_DELAY 300
+#define PAIRING_LONG_PRESS  3000
+#define DELAY_SLOW_BLINKING 600
+#define DELAY_FAST_BLINKING 300
 
 static uint8_t bt_current_state = BT_OFF;
 static bool bt_led_on = false;
@@ -127,14 +128,18 @@ uint32_t led_blinking(uint32_t trigger_time, void *cb_arg) {
 
     switch (bt_current_state) {
         case BT_PAIRING:
-            return PAIRING_BLINK_DELAY;
+            return DELAY_SLOW_BLINKING;
         case BT_DISCONNECTED:
-        case BT_CONNECTING:
             if (key_pressed_time == 0 || timer_elapsed32(key_pressed_time) > 3000) {
                 key_pressed_time = 0;
                 bt_led_on = false;
             }
-            return DISCONNECTED_BLINK_DELAY;
+        case BT_CONNECTING:
+            return DELAY_FAST_BLINKING;
+        case BT_POWERING_UP:
+            // static led on during bootup in bt mode for 1 second
+            bt_led_on = true;
+            return 1000;
         case BT_CONNECTED:
         case BT_OFF:
         default:
@@ -150,6 +155,8 @@ uint32_t led_blinking(uint32_t trigger_time, void *cb_arg) {
 */
 void select_bt_profile(uint8_t profile) {
     if (bt_current_state != BT_OFF) {
+        iton_bt_mode_bt();
+        set_output(OUTPUT_BLUETOOTH);
         // Start pairing in 2 seconds (Will be cancelled on key release)
         if (!extend_deferred_exec(deferred_bt_pairing, PAIRING_LONG_PRESS)) {
             deferred_bt_pairing = defer_exec(PAIRING_LONG_PRESS, start_pairing, NULL);
@@ -175,6 +182,7 @@ void iton_bt_entered_pairing() {
 };
 
 void iton_bt_disconnected() {
+    key_pressed_time = timer_read();
     bt_current_state = BT_DISCONNECTED;
 };
 
@@ -204,7 +212,7 @@ bool dip_switch_update_user(uint8_t index, bool active) {
                 set_output(OUTPUT_USB);
             } else {
                 set_output(OUTPUT_BLUETOOTH);
-                bt_current_state = BT_CONNECTING; // We should be trying to connect, so just signal this
+                bt_current_state = BT_POWERING_UP; // We should be trying to connect, so just signal this
             }
             return false;
         break;
@@ -226,13 +234,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                     select_bt_profile(2);
                     return false;
                 case KC_USB:
+                    iton_bt_mode_usb();
                     set_output(OUTPUT_USB);
                     return false;
                 case KC_PAIR:
                     iton_bt_enter_pairing();
                     return false;
-                default:
-                    key_pressed_time = timer_read();
             }
         } else if (keycode >= KC_BT1 && keycode <= KC_BT3) {
             cancel_deferred_exec(deferred_bt_pairing);
@@ -247,7 +254,7 @@ void keyboard_post_init_user(void) {
     if (kb_config.bt_profile > BT_MAX_PROFILES) {
         kb_config.bt_profile = 0;
     }
-    defer_exec(300, led_blinking, NULL);
+    defer_exec(100, led_blinking, NULL);
 }
 
 
