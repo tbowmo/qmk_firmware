@@ -67,8 +67,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [_FN1] = LAYOUT_tkl_iso(
         QK_BOOT,          KC_BRID, KC_BRIU, KC_TASK,  KC_FLXP,  RGB_VAD,  RGB_VAI,  KC_MPRV,  KC_MPLY,  KC_MNXT,  KC_MUTE,  KC_VOLD,  KC_VOLU,       _______,   _______,  RGB_TOG,
-        _______,  KC_BT1,  KC_BT2,  KC_BT3,  KC_USB,  KC_PAIR,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,       RGB_SAI,   RGB_SAI,  RGB_HUI,
-        _______, _______, _______, _______, _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,                 RGB_SAD,   RGB_SAD,  RGB_HUD,
+        _______,  KC_BT1,  KC_BT2,  KC_BT3,  KC_USB,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,       RGB_VAI,   RGB_SAI,  RGB_HUI,
+        _______, _______, _______, _______, _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,                 RGB_VAD,   RGB_SAD,  RGB_HUD,
         _______, _______, _______, _______, _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,
         _______, _______, _______, _______, _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  KC_WREF,                            KC_VOLU,
         _______, _______, _______,                    _______,                                          _______,  _______,  _______,  KC_MPLY,       KC_MPRV,   KC_VOLD,  KC_MNXT
@@ -93,21 +93,27 @@ typedef union {
 
 kb_config_t kb_config;
 
-enum bt_states {
-    BT_OFF,
-    BT_POWERING_UP,
-    BT_CONNECTING,
-    BT_CONNECTED,
-    BT_PAIRING,
-    BT_DISCONNECTED,
+enum profile_states_t {
+    STATE_CONNECTING,
+    STATE_CONNECTED,
+    STATE_PAIRING,
+    STATE_DISCONNECTED,
+};
+
+enum profiles_t {
+    PROFILE_BT_1 = 0,
+    PROFILE_BT_2 = 1,
+    PROFILE_BT_3 = 2,
+    PROFILE_USB = 3,
 };
 
 #define PAIRING_LONG_PRESS  3000
 #define DELAY_SLOW_BLINKING 600
 #define DELAY_FAST_BLINKING 300
 
-static uint8_t bt_current_state = BT_OFF;
-static bool bt_led_on = false;
+static bool bluetooth_enabled = false;
+static bool profile_led = false;
+static uint8_t current_profile_state = STATE_DISCONNECTED;
 static deferred_token deferred_bt_pairing = INVALID_DEFERRED_TOKEN;
 static uint16_t key_pressed_time;
 
@@ -124,48 +130,53 @@ uint32_t start_pairing(uint32_t trigger_time, void *cb_arg) {
  * Deferred execution for LED blinking
 */
 uint32_t led_blinking(uint32_t trigger_time, void *cb_arg) {
-    bt_led_on = !bt_led_on;
+    profile_led = !profile_led;
 
-    switch (bt_current_state) {
-        case BT_PAIRING:
+    switch (current_profile_state) {
+        case STATE_PAIRING:
             return DELAY_SLOW_BLINKING;
-        case BT_DISCONNECTED:
+        case STATE_DISCONNECTED:
             if (key_pressed_time == 0 || timer_elapsed32(key_pressed_time) > 3000) {
                 key_pressed_time = 0;
-                bt_led_on = false;
+                profile_led = false;
             }
-        case BT_CONNECTING:
             return DELAY_FAST_BLINKING;
-        case BT_POWERING_UP:
+        case STATE_CONNECTING:
+            current_profile_state = STATE_CONNECTED;
             // static led on during bootup in bt mode for 1 second
-            bt_led_on = true;
+            profile_led = true;
             return 1000;
-        case BT_CONNECTED:
-        case BT_OFF:
+        case STATE_CONNECTED:
         default:
-            bt_led_on = false;
+            profile_led = false;
             return 1000;
     }
 }
 
 /**
- * Internal bt profile selection, storing the selected profile
+ * Internal profile selection, storing the selected profile
  * in eeprom, so it can be retrieved on bootup for flashing correct
  * indicators
 */
-void select_bt_profile(uint8_t profile) {
-    if (bt_current_state != BT_OFF) {
-        iton_bt_mode_bt();
-        set_output(OUTPUT_BLUETOOTH);
-        // Start pairing in 2 seconds (Will be cancelled on key release)
-        if (!extend_deferred_exec(deferred_bt_pairing, PAIRING_LONG_PRESS)) {
-            deferred_bt_pairing = defer_exec(PAIRING_LONG_PRESS, start_pairing, NULL);
+void select_profile(uint8_t profile) {
+    dprintf("profile %u, enabled %u", profile, bluetooth_enabled);
+    if (bluetooth_enabled) {
+        if (profile < PROFILE_USB) {
+            set_output(OUTPUT_BLUETOOTH);
+            // Start pairing in 2 seconds (Will be cancelled on key release)
+            if (!extend_deferred_exec(deferred_bt_pairing, PAIRING_LONG_PRESS)) {
+                deferred_bt_pairing = defer_exec(PAIRING_LONG_PRESS, start_pairing, NULL);
+            }
+            iton_bt_switch_profile(profile);
+        } else {
+            set_output(OUTPUT_USB);
+            kb_config.bt_profile = PROFILE_USB;
         }
+        current_profile_state = STATE_CONNECTING;
         if (kb_config.bt_profile != profile) {
             kb_config.bt_profile = profile;
             eeconfig_update_user(kb_config.raw);
         }
-        iton_bt_switch_profile(profile);
     }
 }
 
@@ -173,21 +184,21 @@ void select_bt_profile(uint8_t profile) {
  * ITON callback methods, setting a local state variable
 */
 void iton_bt_connection_successful() {
-    bt_current_state = BT_CONNECTED;
+    current_profile_state = STATE_CONNECTED;
     set_output(OUTPUT_BLUETOOTH);
 }
 
 void iton_bt_entered_pairing() {
-    bt_current_state = BT_PAIRING;
+    current_profile_state = STATE_PAIRING;
 };
 
 void iton_bt_disconnected() {
     key_pressed_time = timer_read();
-    bt_current_state = BT_DISCONNECTED;
+    current_profile_state = STATE_DISCONNECTED;
 };
 
 void iton_bt_enters_connection_state() {
-    bt_current_state = BT_CONNECTING;
+    current_profile_state = STATE_CONNECTING;
 };
 
 
@@ -195,7 +206,7 @@ void iton_bt_enters_connection_state() {
  * Setting led on / off (blinking freq defined in deferred exec blink routine)
 */
 bool rgb_matrix_indicators_user(void) {
-    if (bt_led_on) {
+    if (profile_led) {
         rgb_matrix_set_color(17 + kb_config.bt_profile, 0, 0, 255);
     }
 
@@ -205,37 +216,44 @@ bool rgb_matrix_indicators_user(void) {
 bool dip_switch_update_user(uint8_t index, bool active) {
     switch (index) {
         case 0: // macos/windows toggle
-            break;
-
-        case 1:
-            if (active) {
-                set_output(OUTPUT_USB);
-            } else {
-                set_output(OUTPUT_BLUETOOTH);
-                bt_current_state = BT_POWERING_UP; // We should be trying to connect, so just signal this
+            if(active) { // Mac mode
+            } else { // Windows mode
             }
             return false;
-        break;
+        case 1:
+            if (active) {
+                bluetooth_enabled = false;
+                select_profile(PROFILE_USB);
+            } else {
+                bluetooth_enabled = true;
+                if (kb_config.bt_profile == PROFILE_USB) {
+                    set_output(OUTPUT_USB);
+                } else {
+                    set_output(OUTPUT_NONE);
+                }
+                current_profile_state = STATE_CONNECTING;
+                defer_exec(100, led_blinking, NULL);
+            }
+            return false;
     }
     return true;
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    if (bt_current_state != BT_OFF) {
+    if (bluetooth_enabled) {
         if (record->event.pressed) {
             switch (keycode) {
                 case KC_BT1:
-                    select_bt_profile(0);
+                    select_profile(PROFILE_BT_1);
                     return false;
                 case KC_BT2:
-                    select_bt_profile(1);
+                    select_profile(PROFILE_BT_2);
                     return false;
                 case KC_BT3:
-                    select_bt_profile(2);
+                    select_profile(PROFILE_BT_3);
                     return false;
                 case KC_USB:
-                    iton_bt_mode_usb();
-                    set_output(OUTPUT_USB);
+                    select_profile(PROFILE_USB);
                     return false;
                 case KC_PAIR:
                     iton_bt_enter_pairing();
@@ -251,10 +269,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 void keyboard_post_init_user(void) {
     kb_config.raw = eeconfig_read_user();
-    if (kb_config.bt_profile > BT_MAX_PROFILES) {
+    if (kb_config.bt_profile >= PROFILE_USB) {
         kb_config.bt_profile = 0;
     }
-    defer_exec(100, led_blinking, NULL);
+    //debug_enable=true;
+    //debug_matrix=true;
+    //debug_keyboard=true;
+    //debug_mouse=true;
 }
 
 
