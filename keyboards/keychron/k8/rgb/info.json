@@ -15,7 +15,7 @@
         "extrakey": true,
         "mousekey": false,
         "nkro": true,
-        "dip_switch_enable": true
+        "dip_switch": true
     },
     "rgb_matrix": {
         "driver": "SN32F24xB"
