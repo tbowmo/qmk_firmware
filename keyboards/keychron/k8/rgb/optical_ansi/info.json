@@ -101,6 +101,9 @@
             ]
         }
     },
+    "matrix_pins": {
+        "input_pressed_state": 1
+    },
     "rgb_matrix": {
         "layout": [
             { "matrix": [ 0, 0 ], "flags": 1, "x": 0, "y": 0 },
