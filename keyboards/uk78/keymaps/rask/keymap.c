@@ -9,7 +9,7 @@
 #define _FL2 2
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-  /* _BL: Base Layer(Default) - For ISO enter use ANSI \
+  /* _BL: Base Layer(Default) - For ISO enter use ANSI
    * ,-------------------------------------------------------------------------------.
    * |`   | 1|  2|  3|  4|  5|  6|  7|  8|  9|  0|  -|  =| \|Del |NLck|  P/|  P*|  P-|
    * |-------------------------------------------------------------------------------|
@@ -30,7 +30,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_LCTL, KC_LALT, KC_LALT,                         KC_SPC,                             KC_RALT, KC_LGUI, KC_LGUI, KC_LEFT,  KC_DOWN, KC_RGHT, KC_P0,   KC_PDOT, KC_PENT
   ),
 
-  /* _FL1: Function Layer 1 - For ISO enter use ANSI \
+  /* _FL1: Function Layer 1 - For ISO enter use ANSI
    * ,-------------------------------------------------------------------------------.
    * |Esc|F1| F2| F3| F4| F5| F6| F7| F8| F9|F10|F11|F12|PScr|Ins|    |    |    |    |
    * |-------------------------------------------------------------------------------|
@@ -51,7 +51,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     _______, _______, _______,                            _______,                            _______, _______, _______, KC_HOME, KC_PGDN, KC_END,  _______, _______, _______
   ),
 
-  /* _FL2: Function Layer 2 - For ISO enter use ANSI \
+  /* _FL2: Function Layer 2 - For ISO enter use ANSI
    * ,-------------------------------------------------------------------------------.
    * |   |  |   |   |   |   |   |   |   |   |   |   |   |    |   |    |    |    |    |
    * |-------------------------------------------------------------------------------|
@@ -68,7 +68,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
     _______, _______, _______, _______, QK_BOOT, _______, _______, _______, _______, KC_MPRV, KC_MPLY, KC_MNXT, _______,          _______, _______, _______, _______, _______,
     KC_CAPS, _______, _______, _______, RGB_MOD, RGB_HUI, RGB_SAI, RGB_VAI, _______, KC_VOLD, KC_VOLU, KC_MUTE, _______,          _______, _______, _______, _______, _______,
-    _______, _______, _______, _______, RGB_TOG, RGB_HUD, RGB_SAD, RGB_VAD, BL_DEC,  BL_INC,  KC_MSTP, _______, _______, _______, _______, _______, _______, _______, _______,
+    _______, _______, _______, _______, RGB_TOG, RGB_HUD, RGB_SAD, RGB_VAD, BL_DOWN, BL_UP,   KC_MSTP, _______, _______, _______, _______, _______, _______, _______, _______,
     _______, KC_APP,  KC_APP,                             BL_TOGG,                            _______, _______, _______, _______, _______, _______, _______, _______, _______
   ),
 
