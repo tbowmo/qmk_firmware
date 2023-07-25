@@ -16,12 +16,12 @@
 #include "split_util.h"
 #include "matrix.h"
 #include "keyboard.h"
-#include "config.h"
 #include "timer.h"
 #include "transport.h"
-#include "quantum.h"
 #include "wait.h"
+#include "debug.h"
 #include "usb_util.h"
+#include "bootloader.h"
 
 #ifdef EE_HANDS
 #    include "eeconfig.h"
@@ -29,6 +29,10 @@
 
 #if defined(RGBLIGHT_ENABLE) && defined(RGBLED_SPLIT)
 #    include "rgblight.h"
+#endif
+
+#if defined(SPLIT_WATCHDOG_ENABLE)
+#    include "bootloader.h"
 #endif
 
 #ifndef SPLIT_USB_TIMEOUT

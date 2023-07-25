@@ -1,9 +1,3 @@
-# MCU name
-MCU = atmega32u4
-
-# Bootloader selection
-BOOTLOADER = atmel-dfu
-
 # Build Options
 #   change yes to no to disable
 #
@@ -21,6 +15,6 @@ ENCODER_ENABLE = yes       # ENables the use of one or more encoders
 OLED_ENABLE = yes
 OLED_DRIVER = SSD1306      # Enables the use of OLED displays
 HAPTIC_ENABLE = yes        # Supported but not included by defaut
-HAPTIC_DRIVER = DRV2605L
+HAPTIC_DRIVER = drv2605l
 
 LTO_ENABLE = yes

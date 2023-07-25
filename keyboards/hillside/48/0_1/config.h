@@ -3,21 +3,6 @@
 
 #pragma once
 
-#include "config_common.h"
-
-/* key matrix size */
-// Rows are doubled-up
-#define MATRIX_ROWS 8
-#define MATRIX_COLS 6
-
-/* Encoder */
-#define ENCODERS_PAD_A { F5 }
-#define ENCODERS_PAD_B { F4 }
-#define ENCODERS_PAD_A_RIGHT { F4 }
-#define ENCODERS_PAD_B_RIGHT { F5 }
-
-#define RGBLIGHT_SLEEP
-
 /* Haptic hardware */
 // The Pimoroni is the likely hardware, for which these settings work
 #define FB_ERM_LRA 1
@@ -31,5 +16,5 @@
 
 /* Haptic waveforms */
 // Two mild waveforms
-#define DRV_GREETING alert_750ms
-#define DRV_MODE_DEFAULT sharp_tick3_60
+#define DRV2605L_GREETING alert_750ms
+#define DRV2605L_DEFAULT_MODE sharp_tick3_60

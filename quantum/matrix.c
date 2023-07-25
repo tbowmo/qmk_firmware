@@ -20,7 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "util.h"
 #include "matrix.h"
 #include "debounce.h"
-#include "quantum.h"
+#include "atomic_util.h"
+
 #ifdef SPLIT_KEYBOARD
 #    include "split_common/split_util.h"
 #    include "split_common/transactions.h"
@@ -269,7 +270,7 @@ __attribute__((weak)) void matrix_read_rows_on_col(matrix_row_t current_matrix[]
 #    error DIODE_DIRECTION is not defined!
 #endif
 
-__attribute__((weak)) void matrix_init_custom(void) {
+void matrix_init(void) {
 #ifdef SPLIT_KEYBOARD
     // Set pinout for right half if pinout for that half is defined
     if (!isLeftHand) {
@@ -294,10 +295,21 @@ __attribute__((weak)) void matrix_init_custom(void) {
         }
 #    endif
     }
+
+    thisHand = isLeftHand ? 0 : (ROWS_PER_HAND);
+    thatHand = ROWS_PER_HAND - thisHand;
 #endif
 
     // initialize key pins
     matrix_init_pins();
+
+    // initialize matrix state: all keys off
+    memset(matrix, 0, sizeof(matrix));
+    memset(raw_matrix, 0, sizeof(raw_matrix));
+
+    debounce_init(ROWS_PER_HAND);
+
+    matrix_init_kb();
 }
 
 #ifdef SPLIT_KEYBOARD
@@ -308,22 +320,32 @@ __attribute__((weak)) bool transport_master_if_connected(matrix_row_t master_mat
 }
 #endif
 
-__attribute__((weak)) bool matrix_scan_custom(matrix_row_t current_matrix[]) {
+#if !defined(SHARED_MATRIX)
+uint8_t matrix_scan(void) {
     matrix_row_t curr_matrix[MATRIX_ROWS] = {0};
-#if defined(DIRECT_PINS) || (DIODE_DIRECTION == COL2ROW)
+
+#    if defined(DIRECT_PINS) || (DIODE_DIRECTION == COL2ROW)
     // Set row, read cols
     for (uint8_t current_row = 0; current_row < ROWS_PER_HAND; current_row++) {
         matrix_read_cols_on_row(curr_matrix, current_row);
     }
-#elif (DIODE_DIRECTION == ROW2COL)
+#    elif (DIODE_DIRECTION == ROW2COL)
     // Set col, read rows
     matrix_row_t row_shifter = MATRIX_ROW_SHIFTER;
     for (uint8_t current_col = 0; current_col < MATRIX_COLS; current_col++, row_shifter <<= 1) {
         matrix_read_rows_on_col(curr_matrix, current_col, row_shifter);
     }
-#endif
+#    endif
+
     bool changed = memcmp(raw_matrix, curr_matrix, sizeof(curr_matrix)) != 0;
     if (changed) memcpy(raw_matrix, curr_matrix, sizeof(curr_matrix));
 
-    return changed;
+#    ifdef SPLIT_KEYBOARD
+    changed = debounce(raw_matrix, matrix + thisHand, ROWS_PER_HAND, changed) | matrix_post_scan();
+#    else
+    changed = debounce(raw_matrix, matrix, ROWS_PER_HAND, changed);
+    matrix_scan_kb();
+#    endif
+    return (uint8_t)changed;
 }
+#endif

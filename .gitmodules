@@ -4,8 +4,8 @@
 	branch = master
 [submodule "lib/chibios-contrib"]
 	path = lib/chibios-contrib
-	url = https://github.com/1Conan/ChibiOS-Contrib
-	branch = sn32_spilld_driver_v2
+	url = https://github.com/SonixQMK/ChibiOS-Contrib
+	branch = sn32_develop
 [submodule "lib/googletest"]
 	path = lib/googletest
 	url = https://github.com/qmk/googletest

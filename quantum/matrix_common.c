@@ -1,9 +1,9 @@
-#include "quantum.h"
 #include "matrix.h"
 #include "debounce.h"
 #include "wait.h"
 #include "print.h"
 #include "debug.h"
+
 #ifdef SPLIT_KEYBOARD
 #    include "split_common/split_util.h"
 #    include "split_common/transactions.h"
@@ -111,7 +111,7 @@ bool matrix_post_scan(void) {
 
         if (changed) memcpy(matrix + thatHand, slave_matrix, sizeof(slave_matrix));
 
-        matrix_scan_quantum();
+        matrix_scan_kb();
     } else {
         transport_slave(matrix + thatHand, matrix + thisHand);
 
@@ -133,8 +133,11 @@ __attribute__((weak)) void matrix_output_unselect_delay(uint8_t line, bool key_p
     matrix_io_delay();
 }
 
-void matrix_init_custom(void);
-bool matrix_scan_custom(matrix_row_t current_matrix[]);
+// CUSTOM MATRIX 'LITE'
+__attribute__((weak)) void matrix_init_custom(void) {}
+__attribute__((weak)) bool matrix_scan_custom(matrix_row_t current_matrix[]) {
+    return true;
+}
 
 #ifdef SPLIT_KEYBOARD
 __attribute__((weak)) void matrix_slave_scan_kb(void) {
@@ -159,7 +162,7 @@ __attribute__((weak)) void matrix_init(void) {
 
     debounce_init(ROWS_PER_HAND);
 
-    matrix_init_quantum();
+    matrix_init_kb();
 }
 
 __attribute__((weak)) uint8_t matrix_scan(void) {
@@ -169,10 +172,10 @@ __attribute__((weak)) uint8_t matrix_scan(void) {
     changed = debounce(raw_matrix, matrix + thisHand, ROWS_PER_HAND, changed) | matrix_post_scan();
 #else
     changed = debounce(raw_matrix, matrix, ROWS_PER_HAND, changed);
-    matrix_scan_quantum();
+    matrix_scan_kb();
 #endif
 
-    return (uint8_t)changed;
+    return changed;
 }
 
 __attribute__((weak)) bool peek_matrix(uint8_t row_index, uint8_t col_index, bool raw) {
